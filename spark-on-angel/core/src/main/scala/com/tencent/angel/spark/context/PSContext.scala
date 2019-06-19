@@ -19,11 +19,12 @@
 package com.tencent.angel.spark.context
 
 import com.tencent.angel.AngelDeployMode
-import com.tencent.angel.ml.matrix.{MatrixMeta, RowType}
+import com.tencent.angel.ml.matrix.{MatrixContext, MatrixMeta, RowType}
 import org.apache.spark._
-import scala.collection.Map
 
+import scala.collection.Map
 import com.tencent.angel.exception.AngelException
+import com.tencent.angel.model.{ModelLoadContext, ModelSaveContext}
 import com.tencent.angel.spark.models.PSVector
 
 
@@ -31,6 +32,8 @@ abstract class PSContext {
   private[spark] def conf: Map[String, String]
 
   protected def stop()
+
+  def createMatrix(matrixContext : MatrixContext): MatrixMeta
 
   def createMatrix(rows: Int, cols: Long, validIndexNum: Long, rowInBlock: Int, colInBlock: Long,
                    rowType: RowType, additionalConfiguration:Map[String, String] = Map()): MatrixMeta
@@ -57,6 +60,10 @@ abstract class PSContext {
   def refreshMatrix(): Unit
 
   def getMatrixMeta(matrixId: Int): Option[MatrixMeta]
+
+  def save(ctx: ModelSaveContext)
+
+  def load(ctx: ModelLoadContext)
 }
 
 object PSContext {

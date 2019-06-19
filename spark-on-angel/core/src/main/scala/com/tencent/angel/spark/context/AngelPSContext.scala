@@ -249,6 +249,20 @@ private[spark] class AngelPSContext(contextId: Int, angelCtx: AngelContext) exte
   }
 
   private[spark] def conf: Map[String, String] = angelConf
+
+  override def createMatrix(mc: MatrixContext): MatrixMeta = {
+    //assertCallByDriver("The operation of creating a matrix can only be called on the driver side.")
+    psAgent.createMatrix(mc, 5000L)
+    val meta = psAgent.getMatrix(mc.getName)
+    matrixCounter += 1
+    matrixMetaMap(meta.getId) = meta
+    meta
+  }
+
+  override def save(ctx: ModelSaveContext): Unit = AngelPSContext.save(ctx)
+
+  override def load(ctx: ModelLoadContext): Unit = AngelPSContext.load(ctx)
+
 }
 
 private[spark] object AngelPSContext {
@@ -305,7 +319,7 @@ private[spark] object AngelPSContext {
   /**
     * Convert SparkConf to Angel Configuration.
     */
-  private def convertToHadoop(conf: SparkConf): Configuration = {
+  def convertToHadoop(conf: SparkConf): Configuration = {
     val appName = conf.get("spark.app.name") + "-ps"
     val queue = conf.get("spark.yarn.queue", "root.default")
 

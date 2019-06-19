@@ -28,9 +28,10 @@ import com.tencent.angel.model.MatrixLoadContext;
 import com.tencent.angel.model.MatrixSaveContext;
 import com.tencent.angel.model.PSMatrixLoadContext;
 import com.tencent.angel.model.PSMatrixSaveContext;
-import com.tencent.angel.ps.storage.matrix.PartitionSource;
 import com.tencent.angel.ps.storage.matrix.ServerMatrix;
-import com.tencent.angel.ps.storage.matrix.ServerPartition;
+import com.tencent.angel.ps.storage.partition.CSRPartition;
+import com.tencent.angel.ps.storage.partition.RowBasedPartition;
+import com.tencent.angel.ps.storage.partition.ServerPartition;
 import com.tencent.angel.utils.HdfsUtil;
 import com.tencent.angel.utils.StringUtils;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
@@ -256,6 +257,7 @@ public abstract class MatrixFormatImpl implements MatrixFormat {
       throw new IOException("Can not find meta file for matrix " + loadContext.getMatrixName() + " on path " + loadContext.getLoadPath());
     }
     MatrixFilesMeta matrixFilesMeta;
+    fs.setVerifyChecksum(false);
     FSDataInputStream input = fs.open(metaFilePath);
     matrixFilesMeta = new MatrixFilesMeta();
     List<MatrixPartitionMeta> partFileMetas = new ArrayList<>();
@@ -300,6 +302,7 @@ public abstract class MatrixFormatImpl implements MatrixFormat {
           if (input != null) {
             input.close();
           }
+          fs.setVerifyChecksum(false);
           input = fs.open(new Path(loadContext.getLoadPath(), currentFileName));
         }
         input.seek(offset);
@@ -575,7 +578,7 @@ public abstract class MatrixFormatImpl implements MatrixFormat {
       PartitionKey partKey = partition.getPartitionKey();
       MatrixPartitionMeta partMeta =
         new MatrixPartitionMeta(partKey.getPartitionId(), partKey.getStartRow(),
-          partKey.getEndRow(), partKey.getStartCol(), partKey.getEndCol(), partition.elementNum(),
+          partKey.getEndRow(), partKey.getStartCol(), partKey.getEndCol(), partition.getElemNum(),
           destFile.getName(), streamPos, 0);
       save(partition, partMeta, saveContext, out);
       partMeta.setLength(out.getPos() - streamPos);
@@ -615,12 +618,11 @@ public abstract class MatrixFormatImpl implements MatrixFormat {
     }
   }
 
+  //TODO:
   protected List<Integer> filter(ServerPartition part, List<Integer> rowIds) {
     List<Integer> ret = new ArrayList<>();
-    PartitionSource rows = part.getRows();
-
     for (int rowId : rowIds) {
-      if (rows.hasRow(rowId)) {
+      if (((RowBasedPartition)part).hasRow(rowId)) {
         ret.add(rowId);
       }
     }
